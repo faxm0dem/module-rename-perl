@@ -22,6 +22,7 @@ sub new {
         dir_exclude        => ['blib'],
         dir_ignore         => ['CVS'],
         wipe_empty_subdirs => 0,
+        renamer            => undef,
         %options,
     };
 
@@ -36,6 +37,8 @@ sub new {
 
     ($self->{new_pmfile}  = $self->{name_new}) =~ s#.*::##g;
      $self->{new_pmfile} .= ".pm";
+
+    $self -> {renamer} ||= \&mv;
 
     bless $self, $class;
 }
@@ -79,7 +82,7 @@ sub find_and_rename {
         INFO "mv $file $newfile";
         my $dir = dirname($newfile);
         mkd $dir unless -d $dir;
-        mv $file, $newfile;
+        $self -> {renamer} -> ($file, $newfile);
     }
 
     (my $dashed_look_for   = $self->{name_old}) =~ s#::#-#g;
@@ -94,7 +97,7 @@ sub find_and_rename {
     }, $start_dir);
     for my $item (@rename_candidates) {
         (my $newitem = $item) =~ s/$dashed_look_for/$dashed_replace_by/;
-        mv $item, $newitem;
+        $self -> {renamer} -> ($item, $newitem);
     }
 
         # Even the start_dir could have to be modified.
@@ -280,6 +283,17 @@ but can be overridden.
 
 If set to a true value, 'empty' (see above) subdirectories will be deleted after
 all renaming and restructuring is done. Defaults to true.
+
+=item C<renamer>
+
+Callback function to effectively move the files. Defaults to L<Sysadm::Install/mv>.
+
+Example:
+
+ sub svn_mv {
+   my ($old, $new) = @_;
+   system ("svn", "mv", $old, $new);
+ }
 
 =back
 
